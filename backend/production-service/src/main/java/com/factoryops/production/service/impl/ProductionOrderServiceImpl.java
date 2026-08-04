@@ -9,12 +9,15 @@ import com.factoryops.production.mapper.ProductionOrderMapper;
 import com.factoryops.production.repository.ProductionOrderRepository;
 import com.factoryops.production.service.ProductionOrderService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductionOrderServiceImpl implements ProductionOrderService {
@@ -24,8 +27,11 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
     private final ProductionOrderRepository productionOrderRepository;
     private final ProductionOrderMapper productionOrderMapper;
 
+    @Transactional
     @Override
     public ProductionOrderResponse create(ProductionOrderRequest request) {
+
+        log.info("Creating production order {}", request.getOrderNumber());
 
         productionOrderRepository.findByOrderNumber(request.getOrderNumber())
                 .ifPresent(order -> {
@@ -47,28 +53,39 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
 
         ProductionOrder saved = productionOrderRepository.save(order);
 
+        log.info("Production order created successfully : {}", saved.getId());
+
         return productionOrderMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public ProductionOrderResponse getById(Long id) {
+
+        log.debug("Fetching production order {}", id);
 
         ProductionOrder order = findOrderOrThrow(id);
 
         return productionOrderMapper.toResponse(order);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<ProductionOrderResponse> getAll() {
+
+        log.debug("Fetching all production orders");
 
         return productionOrderMapper.toResponseList(
                 productionOrderRepository.findAll()
         );
     }
 
+    @Transactional
     @Override
     public ProductionOrderResponse update(Long id,
                                           ProductionOrderRequest request) {
+
+        log.info("Updating production order {}", id);
 
         ProductionOrder order = findOrderOrThrow(id);
 
@@ -89,21 +106,30 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
         order.setStartDate(request.getStartDate());
         order.setEndDate(request.getEndDate());
         order.setUpdatedAt(LocalDateTime.now());
-
         ProductionOrder updated = productionOrderRepository.save(order);
+
+        log.info("Production order updated successfully : {}", updated.getId());
 
         return productionOrderMapper.toResponse(updated);
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+
+        log.info("Deleting production order {}", id);
 
         ProductionOrder order = findOrderOrThrow(id);
 
         try {
+
             productionOrderRepository.delete(order);
-        }
-        catch (DataIntegrityViolationException ex) {
+
+            log.info("Production order deleted successfully : {}", id);
+
+        } catch (DataIntegrityViolationException ex) {
+
+            log.error("Failed to delete production order {}", id);
 
             throw new BusinessException(
                     "Cannot delete Production Order "

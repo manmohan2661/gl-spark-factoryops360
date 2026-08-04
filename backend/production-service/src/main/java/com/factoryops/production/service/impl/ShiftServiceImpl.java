@@ -9,11 +9,14 @@ import com.factoryops.production.mapper.ShiftMapper;
 import com.factoryops.production.repository.ShiftRepository;
 import com.factoryops.production.service.ShiftService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShiftServiceImpl implements ShiftService {
@@ -23,13 +26,17 @@ public class ShiftServiceImpl implements ShiftService {
     private final ShiftRepository shiftRepository;
     private final ShiftMapper shiftMapper;
 
+    @Transactional
     @Override
     public ShiftResponse create(ShiftRequest request) {
+
+        log.info("Creating shift {}", request.getShiftName());
 
         shiftRepository.findByShiftName(request.getShiftName())
                 .ifPresent(existing -> {
                     throw new BusinessException(
-                            "Shift already exists with name: " + request.getShiftName());
+                            "Shift already exists with name: "
+                                    + request.getShiftName());
                 });
 
         validateShift(request);
@@ -37,30 +44,45 @@ public class ShiftServiceImpl implements ShiftService {
         Shift shift = shiftMapper.toEntity(request);
 
         LocalDateTime now = LocalDateTime.now();
+
         shift.setCreatedAt(now);
         shift.setUpdatedAt(now);
 
         Shift saved = shiftRepository.save(shift);
 
+        log.info("Shift created successfully : {}", saved.getId());
+
         return shiftMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public ShiftResponse getById(Long id) {
+
+        log.debug("Fetching shift {}", id);
 
         Shift shift = findShiftOrThrow(id);
 
         return shiftMapper.toResponse(shift);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<ShiftResponse> getAll() {
 
-        return shiftMapper.toResponseList(shiftRepository.findAll());
+        log.debug("Fetching all shifts");
+
+        return shiftMapper.toResponseList(
+                shiftRepository.findAll()
+        );
     }
 
+    @Transactional
     @Override
-    public ShiftResponse update(Long id, ShiftRequest request) {
+    public ShiftResponse update(Long id,
+                                ShiftRequest request) {
+
+        log.info("Updating shift {}", id);
 
         Shift shift = findShiftOrThrow(id);
 
@@ -68,7 +90,8 @@ public class ShiftServiceImpl implements ShiftService {
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
                     throw new BusinessException(
-                            "Shift already exists with name: " + request.getShiftName());
+                            "Shift already exists with name: "
+                                    + request.getShiftName());
                 });
 
         validateShift(request);
@@ -81,22 +104,31 @@ public class ShiftServiceImpl implements ShiftService {
 
         Shift updated = shiftRepository.save(shift);
 
+        log.info("Shift updated successfully : {}", updated.getId());
+
         return shiftMapper.toResponse(updated);
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+
+        log.info("Deleting shift {}", id);
 
         Shift shift = findShiftOrThrow(id);
 
         shiftRepository.delete(shift);
+
+        log.info("Shift deleted successfully : {}", id);
     }
 
     private void validateShift(ShiftRequest request) {
 
         if (!request.getEndTime().isAfter(request.getStartTime())) {
+
             throw new BusinessException(
-                    "End time must be after start time");
+                    "End time must be after start time"
+            );
         }
     }
 
@@ -104,6 +136,9 @@ public class ShiftServiceImpl implements ShiftService {
 
         return shiftRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(RESOURCE_NAME, id));
+                        new ResourceNotFoundException(
+                                RESOURCE_NAME,
+                                id
+                        ));
     }
 }

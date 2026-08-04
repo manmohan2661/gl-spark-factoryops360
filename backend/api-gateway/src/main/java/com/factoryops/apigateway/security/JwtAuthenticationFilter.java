@@ -34,11 +34,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         String authHeader =
-                exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+                exchange.getRequest()
+                        .getHeaders()
+                        .getFirst(HttpHeaders.AUTHORIZATION);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
 
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            log.warn("Unauthorized request: Missing or invalid Authorization header.");
+
+            exchange.getResponse()
+                    .setStatusCode(HttpStatus.UNAUTHORIZED);
 
             return exchange.getResponse().setComplete();
         }
@@ -47,18 +52,22 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         if (!jwtService.isTokenValid(token)) {
 
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            log.warn("Unauthorized request: Invalid or expired JWT token.");
+
+            exchange.getResponse()
+                    .setStatusCode(HttpStatus.UNAUTHORIZED);
 
             return exchange.getResponse().setComplete();
         }
 
-        log.info("JWT validated successfully.");
+        log.debug("JWT validated successfully.");
 
         return chain.filter(exchange);
     }
 
     @Override
     public int getOrder() {
+
         return -2;
     }
 }

@@ -12,11 +12,14 @@ import com.factoryops.production.repository.MachineMaintenanceRepository;
 import com.factoryops.production.repository.MachineRepository;
 import com.factoryops.production.service.MachineMaintenanceService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MachineMaintenanceServiceImpl implements MachineMaintenanceService {
@@ -27,45 +30,62 @@ public class MachineMaintenanceServiceImpl implements MachineMaintenanceService 
     private final MachineMaintenanceMapper machineMaintenanceMapper;
     private final MachineRepository machineRepository;
 
+    @Transactional
     @Override
     public MachineMaintenanceResponse create(MachineMaintenanceRequest request) {
+
+        log.info("Creating maintenance record for machine {}", request.getMachineId());
 
         Machine machine = findMachineOrThrow(request.getMachineId());
 
         validateMaintenance(request);
 
-        MachineMaintenance maintenance = machineMaintenanceMapper.toEntity(request);
+        MachineMaintenance maintenance =
+                machineMaintenanceMapper.toEntity(request);
 
         maintenance.setMachine(machine);
 
         LocalDateTime now = LocalDateTime.now();
+
         maintenance.setCreatedAt(now);
         maintenance.setUpdatedAt(now);
 
-        MachineMaintenance saved = machineMaintenanceRepository.save(maintenance);
+        MachineMaintenance saved =
+                machineMaintenanceRepository.save(maintenance);
+
+        log.info("Maintenance record created successfully : {}", saved.getId());
 
         return machineMaintenanceMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public MachineMaintenanceResponse getById(Long id) {
+
+        log.debug("Fetching maintenance record {}", id);
 
         MachineMaintenance maintenance = findMaintenanceOrThrow(id);
 
         return machineMaintenanceMapper.toResponse(maintenance);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<MachineMaintenanceResponse> getAll() {
+
+        log.debug("Fetching all maintenance records");
 
         return machineMaintenanceMapper.toResponseList(
                 machineMaintenanceRepository.findAll()
         );
     }
 
+    @Transactional
     @Override
     public MachineMaintenanceResponse update(Long id,
                                              MachineMaintenanceRequest request) {
+
+        log.info("Updating maintenance record {}", id);
 
         MachineMaintenance maintenance = findMaintenanceOrThrow(id);
 
@@ -81,17 +101,25 @@ public class MachineMaintenanceServiceImpl implements MachineMaintenanceService 
         maintenance.setMachine(machine);
         maintenance.setUpdatedAt(LocalDateTime.now());
 
-        MachineMaintenance updated = machineMaintenanceRepository.save(maintenance);
+        MachineMaintenance updated =
+                machineMaintenanceRepository.save(maintenance);
+
+        log.info("Maintenance record updated successfully : {}", updated.getId());
 
         return machineMaintenanceMapper.toResponse(updated);
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+
+        log.info("Deleting maintenance record {}", id);
 
         MachineMaintenance maintenance = findMaintenanceOrThrow(id);
 
         machineMaintenanceRepository.delete(maintenance);
+
+        log.info("Maintenance record deleted successfully : {}", id);
     }
 
     /**
@@ -126,13 +154,19 @@ public class MachineMaintenanceServiceImpl implements MachineMaintenanceService 
 
         return machineMaintenanceRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(RESOURCE_NAME, id));
+                        new ResourceNotFoundException(
+                                RESOURCE_NAME,
+                                id
+                        ));
     }
 
     private Machine findMachineOrThrow(Long id) {
 
         return machineRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Machine", id));
+                        new ResourceNotFoundException(
+                                "Machine",
+                                id
+                        ));
     }
 }

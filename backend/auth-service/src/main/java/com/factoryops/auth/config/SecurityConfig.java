@@ -26,6 +26,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+
                 .csrf(csrf -> csrf.disable())
 
                 .sessionManagement(session ->
@@ -41,20 +42,26 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
+                        // Public APIs
                         .requestMatchers(
                                 "/api/v1/auth/**",
-
-                                "/api/v1/users/**",
-                                "/api/v1/roles/**",
-
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-
-                                "/actuator/**"
+                                "/actuator/health",
+                                "/actuator/info"
                         ).permitAll()
 
-                        .anyRequest().authenticated()
+                        // Admin Only APIs
+                        .requestMatchers("/api/v1/users/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers("/api/v1/roles/**")
+                        .hasRole("ADMIN")
+
+                        // All Remaining APIs Require Authentication
+                        .anyRequest()
+                        .authenticated()
                 );
 
         return http.build();

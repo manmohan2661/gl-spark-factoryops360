@@ -22,7 +22,7 @@ public class Machine {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "machine_code", nullable = false, length = 30)
+    @Column(name = "machine_code", unique = true, nullable = false, length = 30)
     private String machineCode;
 
     @Column(name = "name", nullable = false, length = 100)

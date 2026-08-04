@@ -9,11 +9,14 @@ import com.factoryops.inventory.mapper.MaterialMapper;
 import com.factoryops.inventory.repository.MaterialRepository;
 import com.factoryops.inventory.service.MaterialService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MaterialServiceImpl implements MaterialService {
@@ -23,8 +26,11 @@ public class MaterialServiceImpl implements MaterialService {
     private final MaterialRepository materialRepository;
     private final MaterialMapper materialMapper;
 
+    @Transactional
     @Override
     public MaterialResponse create(MaterialRequest request) {
+
+        log.info("Creating material {}", request.getCode());
 
         if (materialRepository.existsByCode(request.getCode())) {
             throw new BusinessException("Material code already exists.");
@@ -34,32 +40,47 @@ public class MaterialServiceImpl implements MaterialService {
 
         Material savedMaterial = materialRepository.save(material);
 
+        log.info("Material created successfully : {}", savedMaterial.getId());
+
         return materialMapper.toResponse(savedMaterial);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public MaterialResponse getById(Long id) {
+
+        log.debug("Fetching material {}", id);
 
         Material material = findMaterialOrThrow(id);
 
         return materialMapper.toResponse(material);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<MaterialResponse> getAll() {
 
-        return materialMapper.toResponseList(materialRepository.findAll());
+        log.debug("Fetching all materials");
+
+        return materialMapper.toResponseList(
+                materialRepository.findAll()
+        );
     }
 
+    @Transactional
     @Override
-    public MaterialResponse update(Long id, MaterialRequest request) {
+    public MaterialResponse update(Long id,
+                                   MaterialRequest request) {
+
+        log.info("Updating material {}", id);
 
         Material material = findMaterialOrThrow(id);
 
         materialRepository.findByCode(request.getCode())
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new BusinessException("Material code already exists.");
+                    throw new BusinessException(
+                            "Material code already exists.");
                 });
 
         material.setCode(request.getCode());
@@ -72,19 +93,32 @@ public class MaterialServiceImpl implements MaterialService {
 
         Material updatedMaterial = materialRepository.save(material);
 
+        log.info("Material updated successfully : {}", updatedMaterial.getId());
+
         return materialMapper.toResponse(updatedMaterial);
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+
+        log.info("Deleting material {}", id);
 
         Material material = findMaterialOrThrow(id);
 
         try {
+
             materialRepository.delete(material);
+
+            log.info("Material deleted successfully : {}", id);
+
         } catch (DataIntegrityViolationException ex) {
+
+            log.error("Failed to delete material {}", id);
+
             throw new BusinessException(
-                    "Cannot delete material '" + material.getCode()
+                    "Cannot delete material '"
+                            + material.getCode()
                             + "' because it is referenced by existing inventory records."
             );
         }
@@ -94,6 +128,9 @@ public class MaterialServiceImpl implements MaterialService {
 
         return materialRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(RESOURCE_NAME, id));
+                        new ResourceNotFoundException(
+                                RESOURCE_NAME,
+                                id
+                        ));
     }
 }

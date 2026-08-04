@@ -2,13 +2,7 @@ package com.factoryops.production.service.impl;
 
 import com.factoryops.production.dto.request.ProductionBatchRequest;
 import com.factoryops.production.dto.response.ProductionBatchResponse;
-import com.factoryops.production.entity.BatchStatus;
-import com.factoryops.production.entity.Machine;
-import com.factoryops.production.entity.MachineStatus;
-import com.factoryops.production.entity.ProductionBatch;
-import com.factoryops.production.entity.ProductionOrder;
-import com.factoryops.production.entity.ProductionOrderStatus;
-import com.factoryops.production.entity.Shift;
+import com.factoryops.production.entity.*;
 import com.factoryops.production.exception.BusinessException;
 import com.factoryops.production.exception.ResourceNotFoundException;
 import com.factoryops.production.mapper.ProductionBatchMapper;
@@ -18,12 +12,15 @@ import com.factoryops.production.repository.ProductionOrderRepository;
 import com.factoryops.production.repository.ShiftRepository;
 import com.factoryops.production.service.ProductionBatchService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductionBatchServiceImpl implements ProductionBatchService {
@@ -36,16 +33,21 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
     private final MachineRepository machineRepository;
     private final ShiftRepository shiftRepository;
 
+    @Transactional
     @Override
     public ProductionBatchResponse create(ProductionBatchRequest request) {
+
+        log.info("Creating production batch {}", request.getBatchNumber());
 
         productionBatchRepository.findByBatchNumber(request.getBatchNumber())
                 .ifPresent(batch -> {
                     throw new BusinessException(
-                            "Batch already exists with number: " + request.getBatchNumber());
+                            "Batch already exists with number: "
+                                    + request.getBatchNumber());
                 });
 
-        ProductionOrder productionOrder = findProductionOrder(request.getProductionOrderId());
+        ProductionOrder productionOrder =
+                findProductionOrder(request.getProductionOrderId());
 
         if (productionOrder.getStatus() == ProductionOrderStatus.COMPLETED
                 || productionOrder.getStatus() == ProductionOrderStatus.CANCELLED) {
@@ -61,14 +63,18 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
             machine = findMachine(request.getMachineId());
 
             if (machine.getStatus() != MachineStatus.OPERATIONAL) {
+
                 throw new BusinessException(
-                        "Machine " + machine.getMachineCode() + " is not operational.");
+                        "Machine "
+                                + machine.getMachineCode()
+                                + " is not operational.");
             }
         }
 
         Shift shift = null;
 
         if (request.getShiftId() != null) {
+
             shift = findShift(request.getShiftId());
         }
 
@@ -80,7 +86,8 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
                     "End time cannot be before start time.");
         }
 
-        ProductionBatch batch = productionBatchMapper.toEntity(request);
+        ProductionBatch batch =
+                productionBatchMapper.toEntity(request);
 
         batch.setProductionOrder(productionOrder);
         batch.setMachine(machine);
@@ -95,27 +102,39 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
             batch.setStatus(BatchStatus.PLANNED);
         }
 
-        ProductionBatch saved = productionBatchRepository.save(batch);
+        ProductionBatch saved =
+                productionBatchRepository.save(batch);
+
+        log.info("Production batch created successfully : {}", saved.getId());
 
         return productionBatchMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public ProductionBatchResponse getById(Long id) {
+
+        log.debug("Fetching production batch {}", id);
 
         return productionBatchMapper.toResponse(findBatch(id));
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<ProductionBatchResponse> getAll() {
+
+        log.debug("Fetching all production batches");
 
         return productionBatchMapper.toResponseList(
                 productionBatchRepository.findAll());
     }
 
+    @Transactional
     @Override
     public ProductionBatchResponse update(Long id,
                                           ProductionBatchRequest request) {
+
+        log.info("Updating production batch {}", id);
 
         ProductionBatch batch = findBatch(id);
 
@@ -123,10 +142,12 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
                     throw new BusinessException(
-                            "Batch already exists with number: " + request.getBatchNumber());
+                            "Batch already exists with number: "
+                                    + request.getBatchNumber());
                 });
 
-        ProductionOrder productionOrder = findProductionOrder(request.getProductionOrderId());
+        ProductionOrder productionOrder =
+                findProductionOrder(request.getProductionOrderId());
 
         Machine machine = null;
 
@@ -135,14 +156,18 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
             machine = findMachine(request.getMachineId());
 
             if (machine.getStatus() != MachineStatus.OPERATIONAL) {
+
                 throw new BusinessException(
-                        "Machine " + machine.getMachineCode() + " is not operational.");
+                        "Machine "
+                                + machine.getMachineCode()
+                                + " is not operational.");
             }
         }
 
         Shift shift = null;
 
         if (request.getShiftId() != null) {
+
             shift = findShift(request.getShiftId());
         }
 
@@ -164,22 +189,35 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
         batch.setShift(shift);
         batch.setUpdatedAt(LocalDateTime.now());
 
-        ProductionBatch updated = productionBatchRepository.save(batch);
+        ProductionBatch updated =
+                productionBatchRepository.save(batch);
+
+        log.info("Production batch updated successfully : {}", updated.getId());
 
         return productionBatchMapper.toResponse(updated);
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+
+        log.info("Deleting production batch {}", id);
 
         ProductionBatch batch = findBatch(id);
 
         try {
+
             productionBatchRepository.delete(batch);
+
+            log.info("Production batch deleted successfully : {}", id);
+
         } catch (DataIntegrityViolationException ex) {
 
+            log.error("Failed to delete production batch {}", id);
+
             throw new BusinessException(
-                    "Cannot delete production batch because it is referenced by other records.");
+                    "Cannot delete production batch because it is referenced by other records."
+            );
         }
     }
 
@@ -187,27 +225,39 @@ public class ProductionBatchServiceImpl implements ProductionBatchService {
 
         return productionBatchRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(RESOURCE_NAME, id));
+                        new ResourceNotFoundException(
+                                RESOURCE_NAME,
+                                id
+                        ));
     }
 
     private ProductionOrder findProductionOrder(Long id) {
 
         return productionOrderRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("ProductionOrder", id));
+                        new ResourceNotFoundException(
+                                "ProductionOrder",
+                                id
+                        ));
     }
 
     private Machine findMachine(Long id) {
 
         return machineRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Machine", id));
+                        new ResourceNotFoundException(
+                                "Machine",
+                                id
+                        ));
     }
 
     private Shift findShift(Long id) {
 
         return shiftRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Shift", id));
+                        new ResourceNotFoundException(
+                                "Shift",
+                                id
+                        ));
     }
 }

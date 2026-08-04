@@ -22,7 +22,7 @@ public class ProductionOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_number", nullable = false, length = 30)
+    @Column(name = "order_number", nullable = false,unique = true, length = 30)
     private String orderNumber;
 
     @Column(name = "product_name", nullable = false, length = 150)

@@ -11,13 +11,15 @@ import com.factoryops.inventory.mapper.InventoryTransactionMapper;
 import com.factoryops.inventory.repository.InventoryRepository;
 import com.factoryops.inventory.repository.InventoryTransactionRepository;
 import com.factoryops.inventory.service.InventoryTransactionService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryTransactionServiceImpl implements InventoryTransactionService {
@@ -28,9 +30,12 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
     private final InventoryTransactionMapper inventoryTransactionMapper;
     private final InventoryRepository inventoryRepository;
 
-    @Override
     @Transactional
+    @Override
     public InventoryTransactionResponse create(InventoryTransactionRequest request) {
+
+        log.info("Creating inventory transaction for inventory {}",
+                request.getInventoryId());
 
         Inventory inventory = findInventoryOrThrow(request.getInventoryId());
 
@@ -41,6 +46,7 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
         );
 
         inventory.setLastUpdated(LocalDateTime.now());
+
         inventoryRepository.save(inventory);
 
         InventoryTransaction transaction =
@@ -52,29 +58,40 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
         InventoryTransaction saved =
                 inventoryTransactionRepository.save(transaction);
 
+        log.info("Inventory transaction created successfully : {}",
+                saved.getId());
+
         return inventoryTransactionMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public InventoryTransactionResponse getById(Long id) {
+
+        log.debug("Fetching inventory transaction {}", id);
 
         return inventoryTransactionMapper.toResponse(
                 findTransactionOrThrow(id)
         );
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<InventoryTransactionResponse> getAll() {
+
+        log.debug("Fetching all inventory transactions");
 
         return inventoryTransactionMapper.toResponseList(
                 inventoryTransactionRepository.findAll()
         );
     }
 
-    @Override
     @Transactional
+    @Override
     public InventoryTransactionResponse update(Long id,
                                                InventoryTransactionRequest request) {
+
+        log.info("Updating inventory transaction {}", id);
 
         InventoryTransaction transaction =
                 findTransactionOrThrow(id);
@@ -94,12 +111,17 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
         InventoryTransaction updated =
                 inventoryTransactionRepository.save(transaction);
 
+        log.info("Inventory transaction updated successfully : {}",
+                updated.getId());
+
         return inventoryTransactionMapper.toResponse(updated);
     }
 
-    @Override
     @Transactional
+    @Override
     public void delete(Long id) {
+
+        log.info("Deleting inventory transaction {}", id);
 
         InventoryTransaction transaction =
                 findTransactionOrThrow(id);
@@ -117,21 +139,21 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
         inventoryRepository.save(inventory);
 
         inventoryTransactionRepository.delete(transaction);
+
+        log.info("Inventory transaction deleted successfully : {}", id);
     }
 
     private void applyStockMovement(Inventory inventory,
                                     TransactionType type,
                                     Integer quantity) {
 
-        int current =
-                inventory.getQuantityAvailable() == null
-                        ? 0
-                        : inventory.getQuantityAvailable();
+        int current = inventory.getQuantityAvailable() == null
+                ? 0
+                : inventory.getQuantityAvailable();
 
         switch (type) {
 
             case INBOUND, ADJUSTMENT ->
-
                     inventory.setQuantityAvailable(current + quantity);
 
             case OUTBOUND, TRANSFER -> {
@@ -139,7 +161,6 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
                 int updated = current - quantity;
 
                 if (updated < 0) {
-
                     throw new BusinessException(
                             "Insufficient stock available."
                     );
@@ -154,10 +175,9 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
                                       TransactionType type,
                                       Integer quantity) {
 
-        int current =
-                inventory.getQuantityAvailable() == null
-                        ? 0
-                        : inventory.getQuantityAvailable();
+        int current = inventory.getQuantityAvailable() == null
+                ? 0
+                : inventory.getQuantityAvailable();
 
         switch (type) {
 
@@ -176,7 +196,6 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
             }
 
             case OUTBOUND, TRANSFER ->
-
                     inventory.setQuantityAvailable(current + quantity);
         }
     }
@@ -185,13 +204,19 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
 
         return inventoryTransactionRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException(RESOURCE_NAME, id));
+                        new ResourceNotFoundException(
+                                RESOURCE_NAME,
+                                id
+                        ));
     }
 
     private Inventory findInventoryOrThrow(Long id) {
 
         return inventoryRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Inventory", id));
+                        new ResourceNotFoundException(
+                                "Inventory",
+                                id
+                        ));
     }
 }

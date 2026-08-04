@@ -2,9 +2,6 @@ package com.factoryops.analytics.dto.response;
 
 import lombok.*;
 
-import java.time.LocalDateTime;
-
-
 @Getter
 @Setter
 @Builder
@@ -12,30 +9,17 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class DashboardResponse {
 
+    private DashboardSummaryResponse summary;
 
-    private Long id;
+    private ProductionDashboardResponse production;
 
-    private Integer totalOrders;
+    private InventoryDashboardResponse inventory;
 
-    private Integer completedOrders;
+    private SupplierDashboardResponse supplier;
 
-    private Integer pendingOrders;
+    private QualityDashboardResponse quality;
 
-    private Integer totalProductionQuantity;
+    private AlertDashboardResponse alerts;
 
-    private Integer totalMachines;
-
-    private Integer operationalMachines;
-
-    private Integer maintenancePending;
-
-    private Double qualityPassRate;
-
-    private Integer activeAlerts;
-
-    private LocalDateTime generatedAt;
-
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
+    private SystemHealthResponse systemHealth;
 }

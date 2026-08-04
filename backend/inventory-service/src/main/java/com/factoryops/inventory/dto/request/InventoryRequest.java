@@ -19,7 +19,8 @@ public class InventoryRequest {
     @Min(value = 0, message = "Reserved quantity cannot be negative")
     private Integer quantityReserved = 0;
 
+    @NotNull(message = "Material ID is required")
     private Long materialId;
-
+    @NotNull(message = "Warehouse ID is required")
     private Long warehouseId;
 }

@@ -22,7 +22,7 @@ public class Shift {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "shift_name", nullable = false, length = 50)
+    @Column(name = "shift_name", nullable = false,unique = true, length = 50)
     private String shiftName;
 
     @Column(name = "start_time", nullable = false)

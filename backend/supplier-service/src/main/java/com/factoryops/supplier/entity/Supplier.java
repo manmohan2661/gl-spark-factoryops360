@@ -21,7 +21,7 @@ public class Supplier {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "code", nullable = false, length = 30)
+    @Column(name = "code", nullable = false, unique = true, length = 30)
     private String code;
 
     @Column(name = "name", nullable = false, length = 150)

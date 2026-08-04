@@ -9,12 +9,15 @@ import com.factoryops.supplier.mapper.SupplierMapper;
 import com.factoryops.supplier.repository.SupplierRepository;
 import com.factoryops.supplier.service.SupplierService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SupplierServiceImpl implements SupplierService {
@@ -24,41 +27,70 @@ public class SupplierServiceImpl implements SupplierService {
     private final SupplierRepository supplierRepository;
     private final SupplierMapper supplierMapper;
 
+    @Transactional
     @Override
     public SupplierResponse create(SupplierRequest request) {
-        supplierRepository.findByCode(request.getCode()).ifPresent(existing -> {
-            throw new BusinessException("Supplier already exists with code: " + request.getCode());
-        });
+
+        log.info("Creating supplier {}", request.getCode());
+
+        supplierRepository.findByCode(request.getCode())
+                .ifPresent(existing -> {
+                    throw new BusinessException(
+                            "Supplier already exists with code: "
+                                    + request.getCode());
+                });
 
         Supplier supplier = supplierMapper.toEntity(request);
 
         LocalDateTime now = LocalDateTime.now();
+
         supplier.setCreatedAt(now);
         supplier.setUpdatedAt(now);
 
         Supplier saved = supplierRepository.save(supplier);
+
+        log.info("Supplier created successfully : {}", saved.getId());
+
         return supplierMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public SupplierResponse getById(Long id) {
+
+        log.debug("Fetching supplier {}", id);
+
         Supplier supplier = findSupplierOrThrow(id);
+
         return supplierMapper.toResponse(supplier);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<SupplierResponse> getAll() {
-        return supplierMapper.toResponseList(supplierRepository.findAll());
+
+        log.debug("Fetching all suppliers");
+
+        return supplierMapper.toResponseList(
+                supplierRepository.findAll()
+        );
     }
 
+    @Transactional
     @Override
-    public SupplierResponse update(Long id, SupplierRequest request) {
+    public SupplierResponse update(Long id,
+                                   SupplierRequest request) {
+
+        log.info("Updating supplier {}", id);
+
         Supplier supplier = findSupplierOrThrow(id);
 
         supplierRepository.findByCode(request.getCode())
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new BusinessException("Supplier already exists with code: " + request.getCode());
+                    throw new BusinessException(
+                            "Supplier already exists with code: "
+                                    + request.getCode());
                 });
 
         supplier.setCode(request.getCode());
@@ -74,23 +106,45 @@ public class SupplierServiceImpl implements SupplierService {
         supplier.setUpdatedAt(LocalDateTime.now());
 
         Supplier updated = supplierRepository.save(supplier);
+
+        log.info("Supplier updated successfully : {}", updated.getId());
+
         return supplierMapper.toResponse(updated);
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+
+        log.info("Deleting supplier {}", id);
+
         Supplier supplier = findSupplierOrThrow(id);
+
         try {
+
             supplierRepository.delete(supplier);
+
+            log.info("Supplier deleted successfully : {}", id);
+
         } catch (DataIntegrityViolationException ex) {
+
+            log.error("Failed to delete supplier {}", id);
+
             throw new BusinessException(
-                    "Cannot delete supplier '" + supplier.getCode()
-                            + "' because it is referenced by existing supplier performance records");
+                    "Cannot delete supplier '"
+                            + supplier.getCode()
+                            + "' because it is referenced by existing supplier performance records."
+            );
         }
     }
 
     private Supplier findSupplierOrThrow(Long id) {
+
         return supplierRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_NAME, id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                RESOURCE_NAME,
+                                id
+                        ));
     }
 }

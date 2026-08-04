@@ -11,11 +11,14 @@ import com.factoryops.quality.repository.DefectRepository;
 import com.factoryops.quality.repository.QualityInspectionRepository;
 import com.factoryops.quality.service.DefectService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DefectServiceImpl implements DefectService {
@@ -26,50 +29,82 @@ public class DefectServiceImpl implements DefectService {
     private final DefectMapper defectMapper;
     private final QualityInspectionRepository qualityInspectionRepository;
 
+    @Transactional
     @Override
     public DefectResponse create(DefectRequest request) {
-        QualityInspection inspection = findInspectionOrThrow(request.getQualityInspectionId());
+
+        log.info("Creating defect for inspection {}",
+                request.getQualityInspectionId());
+
+        QualityInspection inspection =
+                findInspectionOrThrow(request.getQualityInspectionId());
 
         Defect defect = defectMapper.toEntity(request);
+
         defect.setQualityInspection(inspection);
 
         LocalDateTime now = LocalDateTime.now();
+
         if (defect.getReportedDate() == null) {
             defect.setReportedDate(now);
         }
+
         if (defect.getResolved() == null) {
             defect.setResolved(false);
         }
+
         defect.setCreatedAt(now);
         defect.setUpdatedAt(now);
 
-        // A logged defect means the unit did not actually pass inspection;
-        // keep the parent inspection's result consistent with reality.
         if (inspection.getResult() == InspectionResult.PASS) {
+
             inspection.setResult(InspectionResult.FAIL);
             inspection.setUpdatedAt(now);
+
             qualityInspectionRepository.save(inspection);
         }
 
         Defect saved = defectRepository.save(defect);
+
+        log.info("Defect created successfully : {}",
+                saved.getId());
+
         return defectMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public DefectResponse getById(Long id) {
+
+        log.debug("Fetching defect {}", id);
+
         Defect defect = findDefectOrThrow(id);
+
         return defectMapper.toResponse(defect);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<DefectResponse> getAll() {
-        return defectMapper.toResponseList(defectRepository.findAll());
+
+        log.debug("Fetching all defects");
+
+        return defectMapper.toResponseList(
+                defectRepository.findAll()
+        );
     }
 
+    @Transactional
     @Override
-    public DefectResponse update(Long id, DefectRequest request) {
+    public DefectResponse update(Long id,
+                                 DefectRequest request) {
+
+        log.info("Updating defect {}", id);
+
         Defect defect = findDefectOrThrow(id);
-        QualityInspection inspection = findInspectionOrThrow(request.getQualityInspectionId());
+
+        QualityInspection inspection =
+                findInspectionOrThrow(request.getQualityInspectionId());
 
         defect.setDefectType(request.getDefectType());
         defect.setSeverity(request.getSeverity());
@@ -80,22 +115,43 @@ public class DefectServiceImpl implements DefectService {
         defect.setUpdatedAt(LocalDateTime.now());
 
         Defect updated = defectRepository.save(defect);
+
+        log.info("Defect updated successfully : {}",
+                updated.getId());
+
         return defectMapper.toResponse(updated);
     }
 
+    @Transactional
     @Override
     public void delete(Long id) {
+
+        log.info("Deleting defect {}", id);
+
         Defect defect = findDefectOrThrow(id);
+
         defectRepository.delete(defect);
+
+        log.info("Defect deleted successfully : {}", id);
     }
 
     private Defect findDefectOrThrow(Long id) {
+
         return defectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_NAME, id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                RESOURCE_NAME,
+                                id
+                        ));
     }
 
     private QualityInspection findInspectionOrThrow(Long id) {
+
         return qualityInspectionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("QualityInspection", id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "QualityInspection",
+                                id
+                        ));
     }
 }
