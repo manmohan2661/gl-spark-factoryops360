@@ -1,0 +1,11 @@
+package com.factoryops.quality.constant;
+
+public final class QualityServiceConstants {
+
+    private QualityServiceConstants() {
+    }
+
+    public static final String API_BASE_PATH = "/api/v1";
+    public static final int DEFAULT_PAGE_NUMBER = 0;
+    public static final int DEFAULT_PAGE_SIZE = 20;
+}

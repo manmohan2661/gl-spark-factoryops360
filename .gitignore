@@ -1,0 +1,46 @@
+# ==========================================================
+# FactoryOps360 - root .gitignore
+# ==========================================================
+
+# --- Java / Maven ---
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+!.mvn/wrapper/*.jar
+
+# --- IDE ---
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+*.code-workspace
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# --- Environment ---
+.env
+.env.local
+.env.*.local
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Misc ---
+HELP.md
+*.bak
+*.tmp
