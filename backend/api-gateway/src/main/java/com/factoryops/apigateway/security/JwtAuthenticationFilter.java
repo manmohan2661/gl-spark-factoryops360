@@ -22,21 +22,33 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange,
                              GatewayFilterChain chain) {
 
-        String path = exchange.getRequest().getURI().getPath();
+        String path = exchange.getRequest()
+                .getURI()
+                .getPath();
 
-        // Public Endpoints
+
+        // ==============================
+        // PUBLIC ENDPOINTS
+        // ==============================
         if (path.startsWith("/api/v1/auth")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs")
-                || path.startsWith("/actuator")) {
+                || path.equals("/actuator/health")
+                || path.equals("/actuator/info")) {
 
             return chain.filter(exchange);
         }
+
+
+        // ==============================
+        // JWT VALIDATION
+        // ==============================
 
         String authHeader =
                 exchange.getRequest()
                         .getHeaders()
                         .getFirst(HttpHeaders.AUTHORIZATION);
+
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
 
@@ -45,10 +57,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             exchange.getResponse()
                     .setStatusCode(HttpStatus.UNAUTHORIZED);
 
-            return exchange.getResponse().setComplete();
+            return exchange.getResponse()
+                    .setComplete();
         }
 
+
         String token = authHeader.substring(7);
+
 
         if (!jwtService.isTokenValid(token)) {
 
@@ -57,13 +72,17 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             exchange.getResponse()
                     .setStatusCode(HttpStatus.UNAUTHORIZED);
 
-            return exchange.getResponse().setComplete();
+            return exchange.getResponse()
+                    .setComplete();
         }
 
-        log.debug("JWT validated successfully.");
+
+        log.debug("JWT validated successfully for request: {}", path);
+
 
         return chain.filter(exchange);
     }
+
 
     @Override
     public int getOrder() {
