@@ -10,6 +10,7 @@ import {
   Truck,
   Warehouse,
   History,
+  Lightbulb,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { dashboardApi } from '@/api/dashboardApi';
@@ -33,9 +34,10 @@ export function DashboardPage() {
   
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: dashboardApi.getDashboard });
   const auditLogsQuery = useQuery({ queryKey: ['audit-logs'], queryFn: dashboardApi.getAuditLogs });
+  const recommendationsQuery = useQuery({ queryKey: ['recommendations'], queryFn: dashboardApi.getRecommendations });
 
-  const isLoading = dashboardQuery.isLoading || auditLogsQuery.isLoading;
-  const isError = dashboardQuery.isError || auditLogsQuery.isError;
+  const isLoading = dashboardQuery.isLoading || auditLogsQuery.isLoading || recommendationsQuery.isLoading;
+  const isError = dashboardQuery.isError || auditLogsQuery.isError || recommendationsQuery.isError;
 
   if (isLoading) return <LoadingState />;
 
@@ -53,6 +55,7 @@ export function DashboardPage() {
 
   const dashboard = dashboardQuery.data;
   const auditLogs = auditLogsQuery.data ?? [];
+  const recommendations = recommendationsQuery.data ?? [];
   const role = user?.role ?? 'VIEWER';
 
   const {
@@ -173,6 +176,39 @@ export function DashboardPage() {
           </Card>
         )}
       </div>
+
+      {/* Operational Intelligence Section */}
+      {recommendations.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-amber-500" />
+            <h2 className="text-xl font-bold tracking-tight">Operational Intelligence</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {recommendations.map((rec) => (
+              <Card key={rec.id} className={cn("border-l-4 shadow-sm", rec.severity === 'CRITICAL' ? 'border-l-red-600' : 'border-l-amber-500')}>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <Badge variant={rec.severity === 'CRITICAL' ? 'danger' : 'warning'}>
+                      {rec.severity === 'CRITICAL' ? '🔥 CRITICAL' : '⚠️ HIGH'}
+                    </Badge>
+                    <span className="text-sm font-bold bg-muted px-2 py-1 rounded-md">Score: {rec.riskScore}</span>
+                  </div>
+                  <CardTitle className="text-lg mt-2">{rec.title}</CardTitle>
+                  <CardDescription className="font-medium text-primary">Affected: {rec.affectedModule}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">{rec.description}</p>
+                  <div className="bg-muted/50 rounded-lg p-3 border border-dashed">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Recommended Action</p>
+                    <p className="text-sm font-medium">{rec.recommendedAction}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Role-Specific KPIs */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

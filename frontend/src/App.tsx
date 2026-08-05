@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/toast';
 import { AppShell } from '@/components/layouts/AppShell';
 import { ProtectedRoute } from '@/components/layouts/ProtectedRoute';
 import { LoginPage } from '@/pages/auth/LoginPage';
@@ -14,6 +16,23 @@ import { NotFoundPage } from '@/pages/system/NotFoundPage';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const handleApiError = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        toast({
+          title: customEvent.detail.title,
+          description: customEvent.detail.description,
+          variant: customEvent.detail.variant,
+        });
+      }
+    };
+
+    window.addEventListener('factoryops360:api-error', handleApiError);
+    return () => window.removeEventListener('factoryops360:api-error', handleApiError);
+  }, [toast]);
 
   return (
     <Routes>
