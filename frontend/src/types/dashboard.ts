@@ -1,3 +1,17 @@
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT';
+
+export interface AuditLogResponse {
+  id: number;
+  entityName: string;
+  entityId: number;
+  action: AuditAction;
+  performedBy: string;
+  performedAt: string;
+  details: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardSummaryResponse {
   totalOrders: number;
   completedOrders: number;

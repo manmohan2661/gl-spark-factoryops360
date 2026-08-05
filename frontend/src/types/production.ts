@@ -8,6 +8,34 @@ export type MaintenanceStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CAN
 
 export type MaintenanceType = 'PREVENTIVE' | 'CORRECTIVE' | 'PREDICTIVE';
 
+export interface ProductionOrderRequest {
+  orderNumber: string;
+  productName: string;
+  quantityOrdered: number;
+  quantityProduced: number;
+  status: ProductionOrderStatus;
+  priority: number;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export interface MachineRequest {
+  machineCode: string;
+  name: string;
+  type: string;
+  status: MachineStatus;
+  location: string;
+  installationDate: string | null;
+}
+
+export interface MachineMaintenanceRequest {
+  maintenanceType: MaintenanceType;
+  status: MaintenanceStatus;
+  scheduledDate: string | null;
+  completedDate: string | null;
+  remarks: string;
+  machineId: number;
+}
 export interface ShiftResponse {
   id: number;
   shiftName: string;
