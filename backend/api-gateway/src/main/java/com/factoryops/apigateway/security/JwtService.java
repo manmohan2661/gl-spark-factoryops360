@@ -23,6 +23,10 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
     public Date extractExpiration(String token) {
 
         return extractClaim(token, Claims::getExpiration);

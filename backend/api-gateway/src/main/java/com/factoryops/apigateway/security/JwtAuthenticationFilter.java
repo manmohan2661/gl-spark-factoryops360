@@ -79,8 +79,23 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         log.debug("JWT validated successfully for request: {}", path);
 
+        try {
+            String username = jwtService.extractUsername(token);
+            String role = jwtService.extractRole(token);
 
-        return chain.filter(exchange);
+            ServerWebExchange modifiedExchange = exchange.mutate()
+                    .request(exchange.getRequest().mutate()
+                            .header("X-User-Name", username)
+                            .header("X-User-Role", role)
+                            .build())
+                    .build();
+
+            return chain.filter(modifiedExchange);
+        } catch (Exception e) {
+            log.error("Failed to extract claims from token", e);
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
     }
 
 

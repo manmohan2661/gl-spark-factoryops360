@@ -57,7 +57,8 @@ public class GatewayConfig {
                         .path("/api/v1/dashboard/**",
                                 "/api/v1/alerts/**",
                                 "/api/v1/notifications/**",
-                                "/api/v1/audit-logs/**")
+                                "/api/v1/audit-logs/**",
+                                "/api/v1/recommendations/**")
                         .uri("lb://ANALYTICS-SERVICE"))
 
 

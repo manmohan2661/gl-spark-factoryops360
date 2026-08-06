@@ -14,7 +14,8 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
-                        .anyExchange().permitAll()
+                        .pathMatchers("/api/v1/auth/**", "/eureka/**").permitAll()
+                        .anyExchange().permitAll() // Authentication is handled by AuthenticationFilter (GlobalFilter)
                 )
                 .build();
     }

@@ -67,6 +67,17 @@ public class GlobalExceptionHandler {
                         HttpStatus.CONFLICT.value()));
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+
+        log.warn("Access denied: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(
+                        "Access Denied",
+                        HttpStatus.FORBIDDEN.value()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGenericException(Exception ex) {
 

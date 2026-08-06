@@ -5,11 +5,13 @@ import com.factoryops.analytics.dto.response.DashboardResponse;
 import com.factoryops.analytics.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/dashboard")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class DashboardController {
 
     private final DashboardService dashboardService;

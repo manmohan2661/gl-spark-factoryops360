@@ -1,8 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Truck, PencilLine, Plus, Trash2, ClipboardCheck } from 'lucide-react';
+import { Truck, PencilLine, Plus, Trash2, ClipboardCheck, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supplierApi } from '@/api/supplierApi';
+import { SupplierComparison } from './components/SupplierComparison';
 import { ErrorState } from '@/components/common/ErrorState';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -83,6 +84,7 @@ export function SupplierPage() {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [deleteState, setDeleteState] = useState<DeleteState | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'directory' | 'comparison'>('directory');
 
   const [supplierSearch, setSupplierSearch] = useState('');
   const [supplierPage, setSupplierPage] = useState(0);
@@ -302,12 +304,19 @@ export function SupplierPage() {
 
   const pageActions = canManageSuppliers ? (
     <div className="flex flex-wrap justify-end gap-2">
-      <Button variant="outline" onClick={openSupplierCreate}>
-        <Plus className="h-4 w-4" /> Add Supplier
+      <Button variant={viewMode === 'comparison' ? 'default' : 'outline'} onClick={() => setViewMode(viewMode === 'comparison' ? 'directory' : 'comparison')}>
+        <BarChart2 className="h-4 w-4 mr-2" /> {viewMode === 'comparison' ? 'View Directory' : 'Compare Suppliers'}
       </Button>
-      <Button onClick={openPerformanceCreate} disabled={suppliers.length === 0}>
-        <ClipboardCheck className="h-4 w-4" /> Evaluate Performance
-      </Button>
+      {viewMode === 'directory' && (
+        <>
+          <Button variant="outline" onClick={openSupplierCreate}>
+            <Plus className="h-4 w-4 mr-2" /> Add Supplier
+          </Button>
+          <Button onClick={openPerformanceCreate} disabled={suppliers.length === 0}>
+            <ClipboardCheck className="h-4 w-4 mr-2" /> Evaluate Performance
+          </Button>
+        </>
+      )}
     </div>
   ) : null;
 
@@ -328,75 +337,81 @@ export function SupplierPage() {
         <Card><CardContent className="p-6"><p className="text-sm text-muted-foreground">Average rating</p><p className="mt-2 text-3xl font-semibold">{summary.rating}</p></CardContent></Card>
       </div>
 
-      <ResourceTable
-        title="Supplier directory"
-        data={pagedSuppliers}
-        columns={[
-          { header: 'Supplier', cell: (item) => <div><div className="font-medium">{item.name}</div><div className="text-xs text-muted-foreground">{item.code}</div></div> },
-          { header: 'Status', cell: (item) => <StatusBadge value={item.status} /> },
-          { header: 'Rating', cell: (item) => item.rating },
-          { header: 'Delivery Perf.', cell: (item) => `${item.performanceScore}%` },
-          { header: 'Delivery Status', cell: (item) => <StatusBadge value={item.deliveryStatus} /> },
-          ...(canManageSuppliers
-            ? [
-                {
-                  header: 'Actions',
-                  cell: (item: any) => (
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openSupplierEdit(item)}>
-                        <PencilLine className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => openDeleteDialog('supplier', item.id, item.name)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ),
-                },
-              ]
-            : []),
-        ]}
-        search={supplierSearch}
-        onSearchChange={(value) => { setSupplierPage(0); setSupplierSearch(value); }}
-        page={supplierPage}
-        totalPages={supplierTotalPages}
-        onPageChange={setSupplierPage}
-        emptyMessage="No suppliers found."
-      />
+      {viewMode === 'comparison' ? (
+        <SupplierComparison suppliers={suppliers} performances={performances} />
+      ) : (
+        <>
+          <ResourceTable
+            title="Supplier directory"
+            data={pagedSuppliers}
+            columns={[
+              { header: 'Supplier', cell: (item) => <div><div className="font-medium">{item.name}</div><div className="text-xs text-muted-foreground">{item.code}</div></div> },
+              { header: 'Status', cell: (item) => <StatusBadge value={item.status} /> },
+              { header: 'Rating', cell: (item) => item.rating },
+              { header: 'Delivery Perf.', cell: (item) => `${item.performanceScore}%` },
+              { header: 'Delivery Status', cell: (item) => <StatusBadge value={item.deliveryStatus} /> },
+              ...(canManageSuppliers
+                ? [
+                    {
+                      header: 'Actions',
+                      cell: (item: any) => (
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openSupplierEdit(item)}>
+                            <PencilLine className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => openDeleteDialog('supplier', item.id, item.name)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+            search={supplierSearch}
+            onSearchChange={(value) => { setSupplierPage(0); setSupplierSearch(value); }}
+            page={supplierPage}
+            totalPages={supplierTotalPages}
+            onPageChange={setSupplierPage}
+            emptyMessage="No suppliers found."
+          />
 
-      <ResourceTable
-        title="Performance evaluations"
-        data={pagedPerformances}
-        columns={[
-          { header: 'Supplier', cell: (item) => <div><div className="font-medium">{supplierById.get(item.supplierId)?.name || 'Unknown'}</div><div className="text-xs text-muted-foreground">{item.evaluationPeriod}</div></div> },
-          { header: 'On-Time Del.', cell: (item) => `${item.onTimeDeliveryRate}%` },
-          { header: 'Quality Score', cell: (item) => `${item.qualityScore}%` },
-          { header: 'Defect Rate', cell: (item) => `${item.defectRate}%` },
-          { header: 'Evaluated', cell: (item) => formatDateTime(item.evaluatedAt) },
-          ...(canManageSuppliers
-            ? [
-                {
-                  header: 'Actions',
-                  cell: (item: SupplierPerformanceResponse) => (
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openPerformanceEdit(item)}>
-                        <PencilLine className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => openDeleteDialog('performance', item.id, `Evaluation for ${supplierById.get(item.supplierId)?.name}`)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ),
-                },
-              ]
-            : []),
-        ]}
-        search={performanceSearch}
-        onSearchChange={(value) => { setPerformancePage(0); setPerformanceSearch(value); }}
-        page={performancePage}
-        totalPages={performanceTotalPages}
-        onPageChange={setPerformancePage}
-        emptyMessage="No performance evaluations found."
-      />
+          <ResourceTable
+            title="Performance evaluations"
+            data={pagedPerformances}
+            columns={[
+              { header: 'Supplier', cell: (item) => <div><div className="font-medium">{supplierById.get(item.supplierId)?.name || 'Unknown'}</div><div className="text-xs text-muted-foreground">{item.evaluationPeriod}</div></div> },
+              { header: 'On-Time Del.', cell: (item) => `${item.onTimeDeliveryRate}%` },
+              { header: 'Quality Score', cell: (item) => `${item.qualityScore}%` },
+              { header: 'Defect Rate', cell: (item) => `${item.defectRate}%` },
+              { header: 'Evaluated', cell: (item) => formatDateTime(item.evaluatedAt) },
+              ...(canManageSuppliers
+                ? [
+                    {
+                      header: 'Actions',
+                      cell: (item: SupplierPerformanceResponse) => (
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openPerformanceEdit(item)}>
+                            <PencilLine className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => openDeleteDialog('performance', item.id, `Evaluation for ${supplierById.get(item.supplierId)?.name}`)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+            search={performanceSearch}
+            onSearchChange={(value) => { setPerformancePage(0); setPerformanceSearch(value); }}
+            page={performancePage}
+            totalPages={performanceTotalPages}
+            onPageChange={setPerformancePage}
+            emptyMessage="No performance evaluations found."
+          />
+        </>
+      )}
 
       {deleteState && (
         <ConfirmDialog
